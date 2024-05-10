@@ -7,7 +7,7 @@ import (
 type TrackInfoHandler interface {
 	Identifier() string
 	PathPattern() string
-	Content(*http.Request) ([]TrackInfo, error)
+	Content(*http.Request) (PlaylistInfo, error)
 }
 
 type TrackInfo struct {
@@ -26,4 +26,21 @@ func NewTrackInfo(artist, track, album string, isSingle, isNew bool) TrackInfo {
 		Album:    album,
 		IsNew:    isNew,
 	}
+}
+
+type PlaylistInfo struct {
+	Tracks     []TrackInfo
+	PlaylistId string
+}
+
+func NewPlaylistInfo(tracks []TrackInfo, playlistId string) PlaylistInfo {
+	return PlaylistInfo{
+		Tracks:     tracks,
+		PlaylistId: playlistId,
+	}
+}
+
+var EmptyPlaylistInfo = PlaylistInfo{
+	Tracks:     []TrackInfo{},
+	PlaylistId: "",
 }

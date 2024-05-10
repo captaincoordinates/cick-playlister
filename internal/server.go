@@ -16,12 +16,13 @@ func ConfigureRouter() *mux.Router {
 	for _, eachHandler := range []handler.TrackInfoHandler{
 		spotify.NewSpotifyHandler(),
 	} {
+		path := fmt.Sprintf(
+			"/%s/%s",
+			eachHandler.Identifier(),
+			eachHandler.PathPattern(),
+		)
 		router.HandleFunc(
-			fmt.Sprintf(
-				"/%s/%s",
-				eachHandler.Identifier(),
-				eachHandler.PathPattern(),
-			),
+			path,
 			createHandlerClosure(eachHandler),
 		)
 	}
