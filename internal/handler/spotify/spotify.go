@@ -1,13 +1,10 @@
 package spotify
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -18,23 +15,23 @@ import (
 
 const playlistIdentifierParam = "playlistIdentifier"
 
-type SpotifyTokenData struct {
-	AccessToken string `json:"access_token"`
-	TokenType   string `json:"token_type"`
-	ExpiresIn   int    `json:"expires_in"`
+type SpotifyTrackData struct {
+	Artists []struct {
+		Name string `json:"name"`
+	} `json:"artists"`
+	Name  string `json:"name"`
+	Album struct {
+		Name                 string `json:"name"`
+		ReleaseDate          string `json:"release_date"`
+		ReleaseDatePrecision string `json:"release_date_precision"`
+		AlbumType            string `json:"album_type"`
+	} `json:"album"`
 }
 
-type PlaylistItemsResponse struct {
+type SpotifyPlaylistData struct {
+	Next  string `json:"next"`
 	Items []struct {
-		Track struct {
-			Artists []struct {
-				Name string `json:"name"`
-			} `json:"artists"`
-			Name  string `json:"name"`
-			Album struct {
-				Name string `json:"name"`
-			} `json:"album"`
-		} `json:"track"`
+		Track SpotifyTrackData `json:"track"`
 	} `json:"items"`
 }
 
@@ -42,13 +39,17 @@ type SpotifyHandler struct {
 	token                string
 	tokenExpiryTimeMilli int64
 	pathParamsProvider   func(*http.Request) map[string]string
+	newReleaseDays       uint
 }
 
-func NewSpotifyHandler() *SpotifyHandler {
+func NewSpotifyHandler(
+	newReleaseDays uint,
+) *SpotifyHandler {
 	return &SpotifyHandler{
 		token:                "",
 		tokenExpiryTimeMilli: 0,
 		pathParamsProvider:   mux.Vars,
+		newReleaseDays:       newReleaseDays,
 	}
 }
 
@@ -72,97 +73,90 @@ func (spotifyHandler *SpotifyHandler) Content(request *http.Request) (playlistIn
 	} else {
 		return handler.EmptyPlaylistInfo, fmt.Errorf("invalid playlist identifier: %s", playlistParamValue)
 	}
-	req, err := http.NewRequest(http.MethodGet, "https://api.spotify.com/v1/playlists/"+playlistId+"/tracks", nil)
-	if err != nil {
-		return handler.EmptyPlaylistInfo, err
-	}
-
-	req.Header.Add("Authorization", "Bearer "+token)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return handler.EmptyPlaylistInfo, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return handler.EmptyPlaylistInfo, fmt.Errorf("spotify API returned status: %d", resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return handler.EmptyPlaylistInfo, err
-	}
-	var data PlaylistItemsResponse
-	err = json.Unmarshal(body, &data)
-	if err != nil {
-		return handler.EmptyPlaylistInfo, err
-	}
-
-	trackInfos := make([]handler.TrackInfo, 0, len(data.Items))
-	for _, entry := range data.Items {
-		artistNames := make([]string, len(entry.Track.Artists))
-		for i, artist := range entry.Track.Artists {
-			artistNames[i] = artist.Name
+	nextUrl := fmt.Sprintf(
+		"https://api.spotify.com/v1/playlists/%s/tracks?fields=%s",
+		playlistId,
+		"next,items(track(name,artists(name),album(name,album_type,release_date,release_date_precision))",
+	)
+	trackInfos := make([]handler.TrackInfo, 0)
+	for nextUrl != "" {
+		req, err := http.NewRequest(http.MethodGet, nextUrl, nil)
+		if err != nil {
+			return handler.EmptyPlaylistInfo, err
 		}
-		artists := strings.Join(artistNames, ", ")
-		trackInfos = append(
-			trackInfos,
-			handler.NewTrackInfo(
-				artists,
-				entry.Track.Name,
-				entry.Track.Album.Name,
-				false,
-				false,
-			),
-		)
+		req.Header.Add("Authorization", "Bearer "+token)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return handler.EmptyPlaylistInfo, err
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return handler.EmptyPlaylistInfo, fmt.Errorf("spotify API returned status: %d", resp.StatusCode)
+		}
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return handler.EmptyPlaylistInfo, err
+		}
+		var data SpotifyPlaylistData
+		err = json.Unmarshal(body, &data)
+		if err != nil {
+			return handler.EmptyPlaylistInfo, err
+		}
+		for _, entry := range data.Items {
+			artistNames := make([]string, len(entry.Track.Artists))
+			for i, artist := range entry.Track.Artists {
+				artistNames[i] = artist.Name
+			}
+			artists := strings.Join(artistNames, ", ")
+			trackInfos = append(
+				trackInfos,
+				handler.NewTrackInfo(
+					artists,
+					entry.Track.Name,
+					entry.Track.Album.Name,
+					entry.Track.Album.AlbumType == "single",
+					spotifyHandler.trackIsNew(entry.Track),
+				),
+			)
+		}
+		nextUrl = data.Next
 	}
 	return handler.NewPlaylistInfo(trackInfos, playlistParamValue), nil
 }
 
-func (spotifyHandler *SpotifyHandler) getToken() (string, error) {
-	nowMilli := time.Now().UTC().UnixMilli()
-	if spotifyHandler.tokenExpiryTimeMilli-nowMilli <= 5000 {
-		clientId := os.Getenv("SPOTIFY_CLIENT_ID")
-		clientSecret := os.Getenv("SPOTIFY_CLIENT_SECRET")
-		data := url.Values{}
-		data.Set("grant_type", "client_credentials")
-		req, err := http.NewRequest(http.MethodPost, "https://accounts.spotify.com/api/token", strings.NewReader(data.Encode()))
-		if err != nil {
-			return "", err
-		}
-		req.Header.Add(
-			"Authorization",
-			fmt.Sprintf(
-				"Basic %s",
-				base64.StdEncoding.EncodeToString(
-					[]byte(
-						fmt.Sprintf(
-							"%s:%s",
-							clientId,
-							clientSecret,
-						),
-					),
-				),
-			),
+func (spotifyHandler *SpotifyHandler) trackIsNew(trackInfo SpotifyTrackData) bool {
+	dateLocation, _ := time.LoadLocation("UTC")
+	var date time.Time
+	var err error
+	switch trackInfo.Album.ReleaseDatePrecision {
+	case "day":
+		date, err = time.ParseInLocation(
+			time.DateOnly,
+			trackInfo.Album.ReleaseDate,
+			dateLocation,
 		)
-		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return "", err
-		}
-		defer resp.Body.Close()
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return "", err
-		}
-		var tokenResponse SpotifyTokenData
-		err = json.Unmarshal(body, &tokenResponse)
-		if err != nil {
-			return "", err
-		}
-		spotifyHandler.token = tokenResponse.AccessToken
-		spotifyHandler.tokenExpiryTimeMilli = nowMilli + int64(tokenResponse.ExpiresIn)*1000
+	case "month":
+		date, err = time.ParseInLocation(
+			time.DateOnly,
+			fmt.Sprintf(
+				"%s-01",
+				trackInfo.Album.ReleaseDate,
+			),
+			dateLocation,
+		)
+	case "year":
+		date, err = time.ParseInLocation(
+			time.DateOnly,
+			fmt.Sprintf(
+				"%s-01-01",
+				trackInfo.Album.ReleaseDate,
+			),
+			dateLocation,
+		)
 	}
-	return spotifyHandler.token, nil
+	if err != nil {
+		fmt.Println(err.Error())
+		return false
+	}
+	return time.Now().UTC().AddDate(0, 0, -int(spotifyHandler.newReleaseDays)).Before(date)
 }

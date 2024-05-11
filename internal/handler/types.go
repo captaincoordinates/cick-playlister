@@ -29,8 +29,8 @@ func NewTrackInfo(artist, track, album string, isSingle, isNew bool) TrackInfo {
 }
 
 type PlaylistInfo struct {
-	Tracks     []TrackInfo
-	PlaylistId string
+	Tracks     []TrackInfo `json:"tracks"`
+	PlaylistId string      `json:"playlistId"`
 }
 
 func NewPlaylistInfo(tracks []TrackInfo, playlistId string) PlaylistInfo {

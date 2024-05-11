@@ -11,10 +11,12 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func ConfigureRouter() *mux.Router {
+func ConfigureRouter(
+	newReleaseDays uint,
+) *mux.Router {
 	router := mux.NewRouter()
 	for _, eachHandler := range []handler.TrackInfoHandler{
-		spotify.NewSpotifyHandler(),
+		spotify.NewSpotifyHandler(newReleaseDays),
 	} {
 		path := fmt.Sprintf(
 			"/%s/%s",
