@@ -5,93 +5,93 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"regexp"
 	"strings"
 	"time"
 
+	"github.com/captaincoordinates/cick-playlister/internal/constants"
 	"github.com/captaincoordinates/cick-playlister/internal/handler"
-	"github.com/gorilla/mux"
 )
-
-const playlistIdentifierParam = "playlistIdentifier"
-
-type SpotifyTrackData struct {
-	Artists []struct {
-		Name string `json:"name"`
-	} `json:"artists"`
-	Name  string `json:"name"`
-	Album struct {
-		Name                 string `json:"name"`
-		ReleaseDate          string `json:"release_date"`
-		ReleaseDatePrecision string `json:"release_date_precision"`
-		AlbumType            string `json:"album_type"`
-	} `json:"album"`
-}
-
-type SpotifyPlaylistData struct {
-	Next  string `json:"next"`
-	Items []struct {
-		Track SpotifyTrackData `json:"track"`
-	} `json:"items"`
-}
-
-type SpotifyHandler struct {
-	token                string
-	tokenExpiryTimeMilli int64
-	pathParamsProvider   func(*http.Request) map[string]string
-	newReleaseDays       uint
-}
-
-func NewSpotifyHandler(
-	newReleaseDays uint,
-) *SpotifyHandler {
-	return &SpotifyHandler{
-		token:                "",
-		tokenExpiryTimeMilli: 0,
-		pathParamsProvider:   mux.Vars,
-		newReleaseDays:       newReleaseDays,
-	}
-}
 
 func (spotifyHandler *SpotifyHandler) Identifier() string {
 	return "spotify"
 }
 
-func (spotifyHandler *SpotifyHandler) PathPattern() string {
-	return fmt.Sprintf(`{%s:open\.spotify\.com/playlist/[a-zA-Z0-9]+}`, playlistIdentifierParam)
+func (spotifyHandler *SpotifyHandler) Track(request *http.Request) (trackInfo handler.TrackInfo, err error) {
+	vars := spotifyHandler.pathParamsProvider(request)
+	trackParamValue := vars[constants.TrackIdentifierParam]
+	token, err := spotifyHandler.getToken()
+	if token == "" || err != nil {
+		return handler.EmptyTrackInfo, handler.NewHandlerAuthenticationError(handler.ApplicationCredentials)
+	}
+	url := fmt.Sprintf(
+		"https://api.spotify.com/v1/tracks/%s",
+		trackParamValue,
+	)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return handler.EmptyTrackInfo, handler.NewInternalError(err.Error())
+	}
+	addAuthHeader(req, token)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return handler.EmptyTrackInfo, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		switch resp.StatusCode {
+		case http.StatusBadRequest:
+			return handler.EmptyTrackInfo, handler.NewInvalidTrackIdError(trackParamValue)
+		case http.StatusNotFound:
+			return handler.EmptyTrackInfo, handler.NewTrackNotFoundError(trackParamValue)
+		default:
+			return handler.EmptyTrackInfo, fmt.Errorf("spotify API returned status: %d", resp.StatusCode)
+		}
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return handler.EmptyTrackInfo, err
+	}
+	var data SpotifyTrackData
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		return handler.EmptyTrackInfo, err
+	}
+	return spotifyHandler.trackInfoFromSpotifyTrackData(data), nil
 }
 
-func (spotifyHandler *SpotifyHandler) Content(request *http.Request) (playlistInfo handler.PlaylistInfo, err error) {
+func (spotifyHandler *SpotifyHandler) Playlist(request *http.Request) (playlistInfo handler.PlaylistInfo, err error) {
 	vars := spotifyHandler.pathParamsProvider(request)
-	playlistParamValue := vars[playlistIdentifierParam]
+	playlistParamValue := vars[constants.PlaylistIdentifierParam]
 	token, err := spotifyHandler.getToken()
-	re := regexp.MustCompile(`playlist/([a-zA-Z0-9]+)$`)
-	match := re.FindStringSubmatch(playlistParamValue)
-	playlistId := ""
-	if len(match) > 1 {
-		playlistId = match[1]
-	} else {
-		return handler.EmptyPlaylistInfo, fmt.Errorf("invalid playlist identifier: %s", playlistParamValue)
+	if token == "" || err != nil {
+		return handler.EmptyPlaylistInfo, handler.NewHandlerAuthenticationError(handler.ApplicationCredentials)
 	}
 	nextUrl := fmt.Sprintf(
 		"https://api.spotify.com/v1/playlists/%s/tracks?fields=%s",
-		playlistId,
+		playlistParamValue,
 		"next,items(track(name,artists(name),album(name,album_type,release_date,release_date_precision))",
 	)
 	trackInfos := make([]handler.TrackInfo, 0)
 	for nextUrl != "" {
 		req, err := http.NewRequest(http.MethodGet, nextUrl, nil)
 		if err != nil {
-			return handler.EmptyPlaylistInfo, err
+			return handler.EmptyPlaylistInfo, handler.NewInternalError(err.Error())
 		}
-		req.Header.Add("Authorization", "Bearer "+token)
+		addAuthHeader(req, token)
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			return handler.EmptyPlaylistInfo, err
 		}
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
-			return handler.EmptyPlaylistInfo, fmt.Errorf("spotify API returned status: %d", resp.StatusCode)
+			switch resp.StatusCode {
+			case http.StatusBadRequest:
+				return handler.EmptyPlaylistInfo, handler.NewInvalidPlaylistIdError(playlistParamValue)
+			case http.StatusNotFound:
+				return handler.EmptyPlaylistInfo, handler.NewPlaylistNotFoundError(playlistParamValue)
+			default:
+				return handler.EmptyPlaylistInfo, fmt.Errorf("spotify API returned status: %d", resp.StatusCode)
+			}
 		}
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
@@ -103,25 +103,29 @@ func (spotifyHandler *SpotifyHandler) Content(request *http.Request) (playlistIn
 			return handler.EmptyPlaylistInfo, err
 		}
 		for _, entry := range data.Items {
-			artistNames := make([]string, len(entry.Track.Artists))
-			for i, artist := range entry.Track.Artists {
-				artistNames[i] = artist.Name
-			}
-			artists := strings.Join(artistNames, ", ")
 			trackInfos = append(
 				trackInfos,
-				handler.NewTrackInfo(
-					artists,
-					entry.Track.Name,
-					entry.Track.Album.Name,
-					entry.Track.Album.AlbumType == "single",
-					spotifyHandler.trackIsNew(entry.Track),
-				),
+				spotifyHandler.trackInfoFromSpotifyTrackData(entry.Track),
 			)
 		}
 		nextUrl = data.Next
 	}
 	return handler.NewPlaylistInfo(trackInfos, playlistParamValue), nil
+}
+
+func (spotifyHandler *SpotifyHandler) trackInfoFromSpotifyTrackData(spotifyTrackData SpotifyTrackData) handler.TrackInfo {
+	artistNames := make([]string, len(spotifyTrackData.Artists))
+	for i, artist := range spotifyTrackData.Artists {
+		artistNames[i] = artist.Name
+	}
+	artists := strings.Join(artistNames, ", ")
+	return handler.NewTrackInfo(
+		artists,
+		spotifyTrackData.Name,
+		spotifyTrackData.Album.Name,
+		spotifyTrackData.Album.AlbumType == "single",
+		spotifyHandler.trackIsNew(spotifyTrackData),
+	)
 }
 
 func (spotifyHandler *SpotifyHandler) trackIsNew(trackInfo SpotifyTrackData) bool {
@@ -159,4 +163,8 @@ func (spotifyHandler *SpotifyHandler) trackIsNew(trackInfo SpotifyTrackData) boo
 		return false
 	}
 	return time.Now().UTC().AddDate(0, 0, -int(spotifyHandler.newReleaseDays)).Before(date)
+}
+
+func addAuthHeader(request *http.Request, token string) {
+	request.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
 }

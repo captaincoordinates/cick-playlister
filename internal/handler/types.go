@@ -6,8 +6,14 @@ import (
 
 type TrackInfoHandler interface {
 	Identifier() string
-	PathPattern() string
-	Content(*http.Request) (PlaylistInfo, error)
+}
+
+type TrackInfoPlaylistHandler interface {
+	Playlist(*http.Request) (PlaylistInfo, error)
+}
+
+type TrackInfoTrackHandler interface {
+	Track(*http.Request) (TrackInfo, error)
 }
 
 type TrackInfo struct {
@@ -27,6 +33,8 @@ func NewTrackInfo(artist, track, album string, isSingle, isNew bool) TrackInfo {
 		IsNew:    isNew,
 	}
 }
+
+var EmptyTrackInfo = TrackInfo{}
 
 type PlaylistInfo struct {
 	Tracks     []TrackInfo `json:"tracks"`
