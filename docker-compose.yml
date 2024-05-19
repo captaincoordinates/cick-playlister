@@ -1,0 +1,8 @@
+services:
+  openapi:
+    build:
+      dockerfile: scripts/openapi/Dockerfile
+    volumes:
+      - ./internal/docs/openapi.yml:/openapi/openapi.yml:ro
+    profiles:
+      - openapi

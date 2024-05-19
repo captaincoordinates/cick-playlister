@@ -1,0 +1,112 @@
+openapi: 3.0.0
+info:
+  title: CICK Playlister API
+  description: Simple API to retrieve track data for public playlists
+  version: 0.0.1
+externalDocs:
+  description: Source code, feature requests, and bug reports.
+  url: https://github.com/captaincoordinates/cick-playlister
+components:
+  schemas:
+    PlaylistInfo:
+      type: object
+      properties:
+        tracks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrackInfo'
+        playlistId:
+          type: string
+    TrackInfo:
+      type: object
+      properties:
+        artist:
+          type: string
+        track:
+          type: string
+        isSingle:
+          type: boolean
+        album:
+          type: string
+        isNew:
+          type: boolean
+  responses:
+    AuthErrorAtProvider:
+      description: Authentication error at provider, which likely must be resolved by the CICK developer
+    InvalidPlaylistId:
+      description: Provided playlist identifier was not valid at the provider
+    InvalidTrackId:
+      description: Provided track identifier was not valid at the provider
+    PlaylistNotFound:
+      description: Provided playlist identifier was valid but was not found at the provider
+    TrackNotFound: 
+      description: Provided track identifier was valid but was not found at the provider
+    InternalServerError:
+      description: An error occurred within this software and must be resolved by the CICK developer
+paths:
+  /spotify/playlist/{playlistIdentifier}:
+    get:
+      parameters:
+        - name: playlistIdentifier
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '.+'
+      responses:
+        "200":
+          description: Successful Spotify playlist data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaylistInfo'
+        "400":
+          $ref: '#/components/responses/InvalidPlaylistId'
+        "401":
+          $ref: '#/components/responses/AuthErrorAtProvider'
+        "404":
+          $ref: '#/components/responses/PlaylistNotFound'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  /spotify/track/{trackIdentifier}:
+    get:
+      parameters:
+        - name: trackIdentifier
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '.+'
+      responses:
+        "200":
+          description: Successful Spotify track data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrackInfo'
+        "400":
+          $ref: '#/components/responses/InvalidTrackId'
+        "401":
+          $ref: '#/components/responses/AuthErrorAtProvider'
+        "404":
+          $ref: '#/components/responses/TrackNotFound'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  /capabilities:
+    get:
+      responses:
+        "200":
+          description: Describes the types of request supported by each available provider
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+  /healthz:
+    get:
+      tags:
+        - Health Check
+      responses:
+        "200":
+          description: Healthy

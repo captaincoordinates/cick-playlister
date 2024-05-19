@@ -1,8 +1,10 @@
 package internal
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"net/http"
 
 	"github.com/captaincoordinates/cick-playlister/internal/constants"
@@ -11,6 +13,9 @@ import (
 
 	"github.com/gorilla/mux"
 )
+
+//go:embed docs
+var docsDirectory embed.FS
 
 func ConfigureRouter(
 	newReleaseDays uint,
@@ -51,16 +56,13 @@ func ConfigureRouter(
 		jsonResponseType(&writer)
 		json.NewEncoder(writer).Encode(capabilitiesMap)
 	})
-	router.PathPrefix("/docs/").Handler(http.StripPrefix("/docs/", http.FileServer(http.Dir("./swagger/"))))
-	router.HandleFunc("/openapi.yml", func(writer http.ResponseWriter, request *http.Request) {
-		http.ServeFile(writer, request, "openapi.yml")
-	})
+	router.PathPrefix("/docs/").Handler(http.FileServer(http.FS(fs.FS(docsDirectory))))
 	router.HandleFunc("/healthz", func(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(200)
 	})
-	// router.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
-	// 	http.Redirect(writer, request, "/docs/", http.StatusMovedPermanently)
-	// })
+	router.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
+		http.Redirect(writer, request, "/docs/swagger/", http.StatusMovedPermanently)
+	})
 	return router
 }
 
