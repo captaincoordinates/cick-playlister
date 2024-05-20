@@ -1,2 +1,3 @@
 .autoenv*.zsh
 .vscode
+cmd/cick-playlister/cick-playlister
