@@ -1,4 +1,5 @@
 .autoenv*.zsh
 .vscode
+**/.DS_Store
 cmd/cick-playlister/cick-playlister
 cmd/cick-playlister/credentials.json
