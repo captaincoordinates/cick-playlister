@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"net/http"
 
+	"github.com/captaincoordinates/cick-playlister/internal/config"
 	"github.com/captaincoordinates/cick-playlister/internal/constants"
 	"github.com/captaincoordinates/cick-playlister/internal/handler"
 	"github.com/captaincoordinates/cick-playlister/internal/handler/spotify"
@@ -22,8 +23,13 @@ func ConfigureRouter(
 ) *mux.Router {
 	router := mux.NewRouter()
 	capabilitiesMap := make(map[string][]string)
+	credentialsConfig := config.NewCredentialsConfig()
 	for _, trackInfoHandler := range []handler.TrackInfoHandler{
-		spotify.NewSpotifyHandler(newReleaseDays),
+		spotify.NewSpotifyHandler(
+			credentialsConfig.Spotify.ClientID,
+			credentialsConfig.Spotify.ClientSecret,
+			newReleaseDays,
+		),
 	} {
 		handlerCapabilities := make([]string, 0)
 		if playlistHandler, ok := trackInfoHandler.(handler.TrackInfoPlaylistHandler); ok {

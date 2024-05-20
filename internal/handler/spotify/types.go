@@ -27,6 +27,8 @@ type SpotifyPlaylistData struct {
 }
 
 type SpotifyHandler struct {
+	clientId             string
+	clientSecret         string
 	token                string
 	tokenExpiryTimeMilli int64
 	pathParamsProvider   func(*http.Request) map[string]string
@@ -34,9 +36,13 @@ type SpotifyHandler struct {
 }
 
 func NewSpotifyHandler(
+	clientId string,
+	clientSecret string,
 	newReleaseDays uint,
 ) *SpotifyHandler {
 	return &SpotifyHandler{
+		clientId:             clientId,
+		clientSecret:         clientSecret,
 		token:                "",
 		tokenExpiryTimeMilli: 0,
 		pathParamsProvider:   mux.Vars,

@@ -1,3 +1,4 @@
 .autoenv*.zsh
 .vscode
 cmd/cick-playlister/cick-playlister
+cmd/cick-playlister/credentials.json

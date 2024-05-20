@@ -19,7 +19,7 @@ func (spotifyHandler *SpotifyHandler) Identifier() string {
 func (spotifyHandler *SpotifyHandler) Track(request *http.Request) (trackInfo handler.TrackInfo, err error) {
 	vars := spotifyHandler.pathParamsProvider(request)
 	trackParamValue := vars[constants.TrackIdentifierParam]
-	token, err := spotifyHandler.getToken()
+	token, err := spotifyHandler.getToken(spotifyHandler.clientId, spotifyHandler.clientSecret)
 	if token == "" || err != nil {
 		return handler.EmptyTrackInfo, handler.NewHandlerAuthenticationError(handler.ApplicationCredentials)
 	}
@@ -62,7 +62,7 @@ func (spotifyHandler *SpotifyHandler) Track(request *http.Request) (trackInfo ha
 func (spotifyHandler *SpotifyHandler) Playlist(request *http.Request) (playlistInfo handler.PlaylistInfo, err error) {
 	vars := spotifyHandler.pathParamsProvider(request)
 	playlistParamValue := vars[constants.PlaylistIdentifierParam]
-	token, err := spotifyHandler.getToken()
+	token, err := spotifyHandler.getToken(spotifyHandler.clientId, spotifyHandler.clientSecret)
 	if token == "" || err != nil {
 		return handler.EmptyPlaylistInfo, handler.NewHandlerAuthenticationError(handler.ApplicationCredentials)
 	}

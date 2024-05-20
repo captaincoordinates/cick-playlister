@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 )
@@ -19,11 +18,9 @@ type SpotifyTokenData struct {
 	ExpiresIn   int    `json:"expires_in"`
 }
 
-func (spotifyHandler *SpotifyHandler) getToken() (string, error) {
+func (spotifyHandler *SpotifyHandler) getToken(clientId string, clientSecret string) (string, error) {
 	nowMilli := time.Now().UTC().UnixMilli()
 	if spotifyHandler.tokenExpiryTimeMilli-nowMilli <= 5000 {
-		clientId := os.Getenv("SPOTIFY_CLIENT_ID")
-		clientSecret := os.Getenv("SPOTIFY_CLIENT_SECRET")
 		data := url.Values{}
 		data.Set("grant_type", "client_credentials")
 		req, err := http.NewRequest(http.MethodPost, "https://accounts.spotify.com/api/token", strings.NewReader(data.Encode()))
