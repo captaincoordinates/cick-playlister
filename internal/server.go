@@ -22,6 +22,7 @@ func ConfigureRouter(
 	newReleaseDays uint,
 ) *mux.Router {
 	router := mux.NewRouter()
+	router.Use(corsMiddleware)
 	capabilitiesMap := make(map[string][]string)
 	credentialsConfig := config.NewCredentialsConfig()
 	for _, trackInfoHandler := range []handler.TrackInfoHandler{
@@ -118,4 +119,17 @@ func statusCodeFromError(err error) (int, string) {
 
 func jsonResponseType(writer *http.ResponseWriter) {
 	(*writer).Header().Set("Content-Type", "application/json")
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Access-Control-Allow-Origin", "*")
+		writer.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		writer.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length")
+		if request.Method == "OPTIONS" {
+			writer.WriteHeader(http.StatusOK)
+			return
+		}
+		next.ServeHTTP(writer, request)
+	})
 }
