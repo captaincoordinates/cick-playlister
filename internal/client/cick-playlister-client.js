@@ -8,7 +8,7 @@ window.cickPlaylisterClient = {
       '    <div class="modal-content">',
       '      <span onclick="window.cickPlaylisterClient.hide()" class="modal-close">&times;</span>',
       '      <br />',
-      '      <input id="playlist-spotify-input" type="text" placeholder="Spotify Playlist ID" />',
+      '      <input id="playlist-spotify-input" type="text" placeholder="Spotify Playlist URL" />',
       '      <button onclick="window.cickPlaylisterClient.playlist(\'spotify\');">Fill</button>',
       '    </div>',
       '  </div>',
