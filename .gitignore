@@ -1,5 +1,9 @@
 .autoenv*.zsh
 .vscode
 **/.DS_Store
+**/node_modules
 cmd/cick-playlister/cick-playlister
 cmd/cick-playlister/credentials.json
+internal/client/dist
+!**/.gitkeep
+

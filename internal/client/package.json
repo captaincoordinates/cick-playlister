@@ -1,0 +1,10 @@
+{
+  "name": "cick-playlister-client",
+  "version": "1.0.0",
+  "scripts": {
+    "watch": "tsc --watch"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}
