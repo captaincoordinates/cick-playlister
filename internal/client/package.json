@@ -5,10 +5,16 @@
     "ts-openapi-types": "openapi-typescript ../docs/openapi.yml -o ./src/generated/types.d.ts",
     "ts-build": "esbuild ./src/cick-playlister-client.ts --bundle --outfile=./dist/cick-playlister-client.js --minify --sourcemap=inline --platform=browser --target=es2017",
     "ts-watch": "esbuild ./src/cick-playlister-client.ts --bundle --outfile=./dist/cick-playlister-client.js --minify --sourcemap=inline --platform=browser --target=es2017 --watch",
-    "build": "npm run ts-openapi-types && npm run ts-build"
+    "less-build": "lessc src/cick-playlister-client.less dist/cick-playlister-client.css",
+    "less-watch": "less-watch-compiler src dist",
+    "watch": "npm-run-all --parallel ts-watch less-watch",
+    "build": "npm run ts-openapi-types && npm run ts-build && npm run less-build"
   },
   "devDependencies": {
     "esbuild": "^0.21.4",
+    "less": "^4.2.0",
+    "less-watch-compiler": "^1.16.3",
+    "npm-run-all": "^4.1.5",
     "typescript": "^5.4.5"
   },
   "dependencies": {

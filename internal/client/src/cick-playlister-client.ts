@@ -29,7 +29,7 @@ class CickPlaylisterClient {
             <br />
             <form onsubmit="window.cickPlaylisterClient.processInput(); return false;">
               <input id="${this.urlInputId}" type="text" placeholder="Paste URL" />
-              <button type="submit">Lookup</button>
+              <button type="submit">Fill</button>
             </form>
           </div>
         </div>
