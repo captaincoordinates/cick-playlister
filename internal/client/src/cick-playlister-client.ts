@@ -18,6 +18,7 @@ class CickPlaylisterClient {
   private readonly providers: {[index: string]: Provider} = {
     [Spotify.identifier]: new Spotify(),
   };
+  private readonly boundEscapeKeyHandler: (event: KeyboardEvent) => void = this.escapeKeyHandler.bind(this);
 
   public show(): void {
     const anchor = this.anchor;
@@ -37,12 +38,14 @@ class CickPlaylisterClient {
     `;
     anchor.style.display = "block";
     this.urlInput.focus();
+    window.addEventListener("keydown", this.boundEscapeKeyHandler);
   }
 
   public hide(): void {
     const anchor = this.anchor;
     anchor.innerHTML = "";
     anchor.style.display = "none";
+    window.removeEventListener("keydown", this.boundEscapeKeyHandler);
   }
 
   public processInput(): void {
@@ -206,6 +209,12 @@ class CickPlaylisterClient {
         })
       )
     ).replace(/=/g, "_"); // need to check if this is required
+  }
+
+  private escapeKeyHandler(event: KeyboardEvent): void {
+    if (event.key === "Escape") {
+      this.hide();
+    }
   }
 }
 
