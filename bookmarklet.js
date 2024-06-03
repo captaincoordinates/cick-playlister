@@ -8,7 +8,7 @@ javascript:(function() {
     }
     var stylesheet = document.createElement("link");
     stylesheet.rel = "stylesheet";
-    stylesheet.href = "http://localhost:8123/client/cick-playlister-client.css";
+    stylesheet.href = "http://localhost:8123/client/dist/cick-playlister-client.css";
     stylesheet.onerror = reportLoadError;
     stylesheet.onload = function() {
         /*
@@ -16,7 +16,7 @@ javascript:(function() {
         to be applied before the script runs and adds DOM elements.
         */
         var script = document.createElement("script");
-        script.src = "http://localhost:8123/client/cick-playlister-client.js";
+        script.src = "http://localhost:8123/client/dist/cick-playlister-client.js";
         script.onerror = reportLoadError;
         script.onload = function() {
             var anchor = document.createElement("div");

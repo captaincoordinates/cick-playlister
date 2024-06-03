@@ -18,7 +18,7 @@ import (
 //go:embed docs
 var docsDirectory embed.FS
 
-//go:embed client
+//go:embed client/dist
 var clientDirectory embed.FS
 
 func ConfigureRouter(
@@ -67,7 +67,7 @@ func ConfigureRouter(
 		json.NewEncoder(writer).Encode(capabilitiesMap)
 	})
 	router.PathPrefix("/docs/").Handler(http.FileServer(http.FS(fs.FS(docsDirectory))))
-	router.PathPrefix("/client/").Handler(http.FileServer(http.FS(fs.FS(clientDirectory))))
+	router.PathPrefix("/client/dist/").Handler(http.FileServer(http.FS(fs.FS(clientDirectory))))
 	router.HandleFunc("/healthz", func(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(200)
 	})

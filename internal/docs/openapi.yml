@@ -10,6 +10,9 @@ components:
   schemas:
     PlaylistInfo:
       type: object
+      required:
+        - tracks
+        - playlistId
       properties:
         tracks:
           type: array
@@ -19,6 +22,12 @@ components:
           type: string
     TrackInfo:
       type: object
+      required:
+        - artist
+        - track
+        - isSingle
+        - album
+        - isNew
       properties:
         artist:
           type: string
