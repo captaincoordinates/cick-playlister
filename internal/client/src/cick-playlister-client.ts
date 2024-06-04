@@ -1,5 +1,5 @@
 import { components } from "./generated/types";
-import { HandlerData, Provider } from "./types";
+import { FillRowResult, HandlerData, Provider } from "./types";
 import { Spotify } from "./providers/spotify";
 import { apiUrlBase } from "./constants";
 
@@ -11,6 +11,8 @@ class CickPlaylisterClient {
   public readonly anchorId: string = "cick-playlister-client-anchor";
 
   private readonly urlInputId: string = "cick-playlister-input";
+  private readonly formSubmitId: string = "cick-playlister-submit";
+  private readonly feedbackElementId: string = "cick-playlister-feedback";
   private readonly trackHashAttribute: string = "data-row-track-hash";
   private readonly trackHashEmptyValue: string = "empty";
   private readonly trackRowCounterAttribute: string = "data-row-counter";
@@ -21,17 +23,56 @@ class CickPlaylisterClient {
   private readonly boundEscapeKeyHandler: (event: KeyboardEvent) => void = this.escapeKeyHandler.bind(this);
 
   public show(): void {
+    const providerIcons = Object.entries(this.providers).map(([identifier, provider]) => {
+      return `
+      <span class="modal-supported-provider">
+        <img
+          src="${apiUrlBase}/client/assets/${provider.icon}"
+          alt="${identifier}"
+          title="${identifier}"
+          width="20px"
+          height="20px"
+          />
+      </span>
+      `
+    });
     const anchor = this.anchor;
     anchor.innerHTML = `
       <div id="cick-playlister-modal">
         <div class="modal-container">
           <div class="modal-content">
-            <span onclick="window.cickPlaylisterClient.hide()" class="modal-close">&times;</span>
-            <br />
+            <div class="modal-title-container">
+              <span class="modal-title">CICK Playlister</span>
+              <span class="modal-close" onclick="window.cickPlaylisterClient.hide()">&times;</span>
+            </div>
+            <div class="modal-supported-providers-container">
+              <span class="modal-supported-providers-title">
+                Supported Services
+              </span>
+              ${providerIcons}
+            </div>
             <form onsubmit="window.cickPlaylisterClient.processInput(); return false;">
-              <input id="${this.urlInputId}" type="text" placeholder="Paste URL" />
-              <button type="submit">Fill</button>
+              <div class="modal-input-container">
+                <span class="modal-input-field-container">
+                  <input
+                    id="${this.urlInputId}"
+                    class="modal-input-field"
+                    type="text"
+                    placeholder="Paste URL"
+                    oninput="window.cickPlaylisterClient.urlChanged()"
+                    />
+                </span>
+                <span>
+                  <button
+                    id="${this.formSubmitId}"
+                    class="modal-submit-button"
+                    type="submit" >
+                    Fill
+                  </button>
+                </span>
+              </div>
             </form>
+            <div id="${this.feedbackElementId}"></div>
           </div>
         </div>
       </div>
@@ -49,48 +90,78 @@ class CickPlaylisterClient {
   }
 
   public processInput(): void {
+    this.clearFeedback();
     var url = this.urlInput.value;
     if (url.length == 0) {
-      this.reportFeedback("URL is empty", this.urlInputId);
+      this.reportFeedback("URL is empty");
       return;
     }
     var handlerData = this.getHandlerData(url);
     if (!handlerData) {
-      this.reportFeedback("URL type is not currently supported", this.urlInputId);
+      this.reportFeedback("URL type is not currently supported");
       return;
     }
+    this.disableUrlInput();
     this.updateHandleTypeDisplay(handlerData.provider, handlerData.type);
     handlerData.handle(apiUrlBase)
       .then(tracks => {
         this.classifyTableRows();
-        tracks.forEach(track => {
-          track = {
-            artist: track.artist,
-            track: track.track,
-            album: track.isSingle ? this.trackSingleValue : track.album,
-            isNew: track.isNew,
-            isSingle: track.isSingle,
-          };
-          var trackHash = this.trackUniqueIdentifier(track);
-          var trackRowEls = document.querySelectorAll(`[${this.trackHashAttribute}="${trackHash}"]`);
-          switch (trackRowEls.length) {
-            case 0:
-              this.fillRow(track);
-              break;
-            case 1:
-              console.debug("skipping " + trackHash);
-              break;
-            default:
-              console.log("unexpectedly found multiple rows with " + trackHash);
-              this.reportError();
+        const counts = {
+          success: 0,
+          noFreeRow: 0,
+          duplicate: 0,
+        };
+        if (tracks.length > 0) {
+          tracks.forEach(track => {
+            track = {
+              artist: track.artist,
+              track: track.track,
+              album: track.isSingle ? this.trackSingleValue : track.album,
+              isNew: track.isNew,
+              isSingle: track.isSingle,
+            };
+            switch(this.fillRow(track)) {
+              case FillRowResult.Success:
+                counts.success++;
+                break;
+              case FillRowResult.Duplicate:
+                counts.duplicate++;
+                break;
+              case FillRowResult.NoFreeRow:
+                counts.noFreeRow++;
+                break;
+            }
+          });
+          if (counts.success === tracks.length) {
+            this.reportFeedback(`${this.trackCountString(counts.success)} filled successfully`);
+          } else {
+            const feedbackParts = [
+              `${this.trackCountString(counts.success)} filled`,
+            ];
+            if (counts.noFreeRow > 0) {
+              feedbackParts.push(`${this.trackCountString(counts.noFreeRow)} skipped as all rows are filled`);
+            }
+            if (counts.duplicate > 0) {
+              feedbackParts.push(`${this.trackCountString(counts.duplicate)} skipped as duplicate`);
+            }
+            this.reportFeedback(feedbackParts.join(", "));
           }
-        });
+        } else {
+          this.reportFeedback("No tracks found");
+        }
+        this.enableUrlInput();
       })
       .catch(err => {
         console.log(err);
         this.reportError();
+        this.clearFeedback();
+        this.enableUrlInput();
       })
     ;
+  }
+
+  public urlChanged(): void {
+    this.clearFeedback();
   }
 
   private getHandlerData(url: string): HandlerData | undefined {
@@ -110,16 +181,34 @@ class CickPlaylisterClient {
     return document.getElementById(this.urlInputId) as HTMLInputElement;
   }
 
+  private get formSubmitButton(): HTMLButtonElement {
+    return document.getElementById(this.formSubmitId) as HTMLButtonElement;
+  }
+
   private updateHandleTypeDisplay(provider: string, type: string): void {
-    console.log(`inform user of ${provider} ${type} handling`);
+    this.reportFeedback(`Processing ${provider}: ${type}...`);
   }
 
   private reportError(): void {
     alert("Error in CICK Playlister. Please report an issue at https://github.com/captaincoordinates/cick-playlister/issues");
   }
 
-  private reportFeedback(message: string, inputId: string): void {
-    console.log(message);
+  private reportFeedback(message: string): void {
+    (document.getElementById(this.feedbackElementId) as HTMLElement).innerText = message;
+  }
+
+  public clearFeedback(): void {
+    this.reportFeedback("");
+  }
+
+  private disableUrlInput(): void {
+    this.urlInput.disabled = true;
+    this.formSubmitButton.disabled = true;
+  }
+
+  private enableUrlInput(): void {
+    this.urlInput.disabled = false;
+    this.formSubmitButton.disabled = false;
   }
 
   private classifyTableRows(): void {
@@ -160,17 +249,17 @@ class CickPlaylisterClient {
     });
   }
 
-  private fillRow(track: TrackInfo): void {
+  private fillRow(track: TrackInfo): FillRowResult {
     const trackHash = this.trackUniqueIdentifier(track);
     const existingRowEls = document.querySelectorAll(`[${this.trackHashAttribute}="${trackHash}"]`);
     if (existingRowEls.length != 0) {
-      console.log(`track already added, skipping ${track.artist}: ${track.track} (${track.album})`);
-      return;
+      console.log(`skipping duplicate in fillRow '${track.artist}': '${track.track}'`);
+      return FillRowResult.Duplicate;
     }
     const emptyRowEls = document.querySelectorAll(`[${this.trackHashAttribute}="${this.trackHashEmptyValue}"]`);
     if (emptyRowEls.length === 0) {
-      this.reportFeedback("no rows available", this.urlInputId);
-      return;
+      console.log(`no rows available for '${track.artist}': '${track.track}'`);
+      return FillRowResult.NoFreeRow;
     }
     const nextRow = emptyRowEls[0];
     const rowCounter = parseInt(nextRow.getAttribute(this.trackRowCounterAttribute)!, 10);
@@ -179,6 +268,7 @@ class CickPlaylisterClient {
     this.getAlbumInput(rowCounter).value = track.album;
     this.getIsNewInput(rowCounter).checked = track.isNew;
     nextRow.setAttribute(this.trackHashAttribute, trackHash);
+    return FillRowResult.Success;
   }
 
   private getArtistInput(rowCounter: number): HTMLInputElement {
@@ -215,6 +305,10 @@ class CickPlaylisterClient {
     if (event.key === "Escape") {
       this.hide();
     }
+  }
+
+  private trackCountString(count: number): string {
+    return `${count} track${count === 1 ? "" : "s"}`;
   }
 }
 

@@ -21,6 +21,9 @@ var docsDirectory embed.FS
 //go:embed client/dist
 var clientDirectory embed.FS
 
+//go:embed client/assets
+var assetsDirectory embed.FS
+
 func ConfigureRouter(
 	newReleaseDays uint,
 ) *mux.Router {
@@ -68,6 +71,7 @@ func ConfigureRouter(
 	})
 	router.PathPrefix("/docs/").Handler(http.FileServer(http.FS(fs.FS(docsDirectory))))
 	router.PathPrefix("/client/dist/").Handler(http.FileServer(http.FS(fs.FS(clientDirectory))))
+	router.PathPrefix("/client/assets/").Handler(http.FileServer(http.FS(fs.FS(assetsDirectory))))
 	router.HandleFunc("/healthz", func(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(200)
 	})

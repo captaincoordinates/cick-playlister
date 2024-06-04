@@ -6,6 +6,10 @@ export class Spotify implements Provider {
   public static readonly identifier: string = "spotify";
   private readonly protocolAndDomain: string = "https://open.spotify.com";
 
+  public get icon(): string {
+    return "spotify.png"
+  }
+
   public getHandlerData(input: string): HandlerData | undefined {
     const matchResult = input.match(new RegExp("^" + this.protocolAndDomain + "/(playlist|track)/([^\?]+)"))
     if (!!matchResult) {
