@@ -6,5 +6,5 @@ cmd/cick-playlister/cick-playlister
 cmd/cick-playlister/credentials.json
 internal/client/dist
 internal/client/src/generated
+dist/**
 !**/.gitkeep
-
