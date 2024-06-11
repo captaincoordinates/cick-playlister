@@ -159,8 +159,7 @@ class CickPlaylisterClient {
       })
       .catch(err => {
         console.log(err);
-        this.reportError();
-        this.clearFeedback();
+        this.reportFeedback(`Problem with this URL, please check it is correct`);
         this.enableUrlInput();
       })
     ;
