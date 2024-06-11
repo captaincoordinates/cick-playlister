@@ -73,6 +73,12 @@ class CickPlaylisterClient {
               </div>
             </form>
             <div id="${this.feedbackElementId}"></div>
+            <br />
+            <hr />
+            <br />
+            <div id="cick-playlister-usage">
+              Read more about the CICK Playlister <a href="https://github.com/captaincoordinates/cick-playlister/blob/main/USAGE.md" target="_blank">here</a>.
+            </div>
           </div>
         </div>
       </div>
