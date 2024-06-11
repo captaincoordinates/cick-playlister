@@ -11,7 +11,7 @@ export class Spotify implements Provider {
   }
 
   public getHandlerData(input: string): HandlerData | undefined {
-    const matchResult = input.match(new RegExp("^" + this.protocolAndDomain + "/(playlist|track)/([^\?]+)"))
+    const matchResult = input.match(new RegExp("^" + this.protocolAndDomain + "/(playlist|album|track)/([^\?]+)"))
     if (!!matchResult) {
       switch (matchResult[1]) {
         case HandlerType.Playlist:
@@ -19,6 +19,12 @@ export class Spotify implements Provider {
             provider: Spotify.identifier,
             type: HandlerType.Playlist,
             handle: Common.getPlaylistFetcher(Spotify.identifier, matchResult[2]),
+          };
+        case HandlerType.Album:
+          return {
+            provider: Spotify.identifier,
+            type: HandlerType.Album,
+            handle: Common.getAlbumFetcher(Spotify.identifier, matchResult[2]),
           };
         case HandlerType.Track:
           return {

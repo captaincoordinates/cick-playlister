@@ -1,7 +1,7 @@
 import { components } from "../generated/types";
 
 type TrackInfo = components["schemas"]["TrackInfo"];
-type PlaylistInfo = components["schemas"]["PlaylistInfo"];
+type TrackCollectionInfo = components["schemas"]["TrackCollectionInfo"];
 
 export class Common {
 
@@ -11,11 +11,28 @@ export class Common {
         .then(async response => {
           if (response.ok) {
             return response.json()
-              .then((data: PlaylistInfo) => {
+              .then((data: TrackCollectionInfo) => {
                 return data.tracks;
               });
           } else {
             throw new Error("Unexpected API response for Playlist ID");
+          }
+        })
+      ;
+    };
+  }
+
+  public static getAlbumFetcher(provider: string, albumId: string): (apiUrl: string) => Promise<TrackInfo[]> {
+    return async function(apiUrlBase: string) {
+      return fetch(`${apiUrlBase}/${provider}/album/${albumId}`)
+        .then(async response => {
+          if (response.ok) {
+            return response.json()
+              .then((data: TrackCollectionInfo) => {
+                return data.tracks;
+              });
+          } else {
+            throw new Error("Unexpected API response for Album ID");
           }
         })
       ;

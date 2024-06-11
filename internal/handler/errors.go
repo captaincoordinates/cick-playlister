@@ -2,17 +2,17 @@ package handler
 
 import "fmt"
 
-type InvalidPlaylistIdError struct {
-	playlistId string
+type InvalidTrackCollectionIdError struct {
+	trackCollectionId string
 }
 
-func (invalidPlaylistIdError InvalidPlaylistIdError) Error() string {
-	return fmt.Sprintf("Invalid playlist ID: %s", invalidPlaylistIdError.playlistId)
+func (invalidTrackCollectionIdError InvalidTrackCollectionIdError) Error() string {
+	return fmt.Sprintf("Invalid track collection ID: %s", invalidTrackCollectionIdError.trackCollectionId)
 }
 
-func NewInvalidPlaylistIdError(playlistId string) InvalidPlaylistIdError {
-	return InvalidPlaylistIdError{
-		playlistId,
+func NewInvalidTrackCollectionIdError(trackCollectionId string) InvalidTrackCollectionIdError {
+	return InvalidTrackCollectionIdError{
+		trackCollectionId,
 	}
 }
 
@@ -38,17 +38,17 @@ func NewHandlerAuthenticationError(credentialType HandlerCredentialType) Handler
 	}
 }
 
-type PlaylistNotFoundError struct {
-	playlistId string
+type TrackCollectionNotFoundError struct {
+	trackCollectionId string
 }
 
-func (playlistNotFoundError PlaylistNotFoundError) Error() string {
-	return fmt.Sprintf("Playlist not found: %s", playlistNotFoundError.playlistId)
+func (trackCollectionNotFoundError TrackCollectionNotFoundError) Error() string {
+	return fmt.Sprintf("Track collection not found: %s", trackCollectionNotFoundError.trackCollectionId)
 }
 
-func NewPlaylistNotFoundError(playlistId string) PlaylistNotFoundError {
-	return PlaylistNotFoundError{
-		playlistId,
+func NewTrackCollectionNotFoundError(trackCollectionId string) TrackCollectionNotFoundError {
+	return TrackCollectionNotFoundError{
+		trackCollectionId,
 	}
 }
 

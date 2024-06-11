@@ -9,6 +9,7 @@ export interface Provider {
 
 export enum HandlerType {
   Playlist = "playlist",
+  Album = "album",
   Track = "track",
 }
 

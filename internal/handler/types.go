@@ -9,7 +9,11 @@ type TrackInfoHandler interface {
 }
 
 type TrackInfoPlaylistHandler interface {
-	Playlist(*http.Request) (PlaylistInfo, error)
+	Playlist(*http.Request) (TrackCollectionInfo, error)
+}
+
+type TrackInfoAlbumHandler interface {
+	Album(*http.Request) (TrackCollectionInfo, error)
 }
 
 type TrackInfoTrackHandler interface {
@@ -36,19 +40,19 @@ func NewTrackInfo(artist, track, album string, isSingle, isNew bool) TrackInfo {
 
 var EmptyTrackInfo = TrackInfo{}
 
-type PlaylistInfo struct {
-	Tracks     []TrackInfo `json:"tracks"`
-	PlaylistId string      `json:"playlistId"`
+type TrackCollectionInfo struct {
+	Tracks       []TrackInfo `json:"tracks"`
+	CollectionId string      `json:"collectionId"`
 }
 
-func NewPlaylistInfo(tracks []TrackInfo, playlistId string) PlaylistInfo {
-	return PlaylistInfo{
-		Tracks:     tracks,
-		PlaylistId: playlistId,
+func NewTrackCollectionInfo(tracks []TrackInfo, collectionId string) TrackCollectionInfo {
+	return TrackCollectionInfo{
+		Tracks:       tracks,
+		CollectionId: collectionId,
 	}
 }
 
-var EmptyPlaylistInfo = PlaylistInfo{
-	Tracks:     []TrackInfo{},
-	PlaylistId: "",
+var EmptyTrackCollectionInfo = TrackCollectionInfo{
+	Tracks:       []TrackInfo{},
+	CollectionId: "",
 }

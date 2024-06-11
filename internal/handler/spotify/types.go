@@ -26,6 +26,21 @@ type SpotifyPlaylistData struct {
 	} `json:"items"`
 }
 
+type SpotifyAlbumData struct {
+	Name                 string `json:"name"`
+	ReleaseDate          string `json:"release_date"`
+	ReleaseDatePrecision string `json:"release_date_precision"`
+	Tracks               struct {
+		Next  string `json:"next"`
+		Items []struct {
+			Artists []struct {
+				Name string `json:"name"`
+			} `json:"artists"`
+			Name string `json:"name"`
+		} `json:"items"`
+	} `json:"tracks"`
+}
+
 type SpotifyHandler struct {
 	clientId             string
 	clientSecret         string

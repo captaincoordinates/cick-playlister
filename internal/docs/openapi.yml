@@ -8,17 +8,17 @@ externalDocs:
   url: https://github.com/captaincoordinates/cick-playlister
 components:
   schemas:
-    PlaylistInfo:
+    TrackCollectionInfo:
       type: object
       required:
         - tracks
-        - playlistId
+        - trackCollectionId
       properties:
         tracks:
           type: array
           items:
             $ref: '#/components/schemas/TrackInfo'
-        playlistId:
+        trackCollectionId:
           type: string
     TrackInfo:
       type: object
@@ -42,12 +42,12 @@ components:
   responses:
     AuthErrorAtProvider:
       description: Authentication error at provider, which likely must be resolved by the CICK developer
-    InvalidPlaylistId:
-      description: Provided playlist identifier was not valid at the provider
+    InvalidTrackCollectionId:
+      description: Provided track collection identifier was not valid at the provider
     InvalidTrackId:
       description: Provided track identifier was not valid at the provider
-    PlaylistNotFound:
-      description: Provided playlist identifier was valid but was not found at the provider
+    TrackCollectionNotFound:
+      description: Provided track collection identifier was valid but was not found at the provider
     TrackNotFound: 
       description: Provided track identifier was valid but was not found at the provider
     InternalServerError:
@@ -68,13 +68,37 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PlaylistInfo'
+                $ref: '#/components/schemas/TrackCollectionInfo'
         "400":
-          $ref: '#/components/responses/InvalidPlaylistId'
+          $ref: '#/components/responses/InvalidTrackCollectionId'
         "401":
           $ref: '#/components/responses/AuthErrorAtProvider'
         "404":
-          $ref: '#/components/responses/PlaylistNotFound'
+          $ref: '#/components/responses/TrackCollectionNotFound'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  /spotify/album/{albumIdentifier}:
+    get:
+      parameters:
+        - name: albumIdentifier
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '.+'
+      responses:
+        "200":
+          description: Successful Spotify album data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrackCollectionInfo'
+        "400":
+          $ref: '#/components/responses/InvalidTrackCollectionId'
+        "401":
+          $ref: '#/components/responses/AuthErrorAtProvider'
+        "404":
+          $ref: '#/components/responses/TrackCollectionNotFound'
         "500":
           $ref: '#/components/responses/InternalServerError'
   /spotify/track/{trackIdentifier}:
@@ -101,17 +125,6 @@ paths:
           $ref: '#/components/responses/TrackNotFound'
         "500":
           $ref: '#/components/responses/InternalServerError'
-  /capabilities:
-    get:
-      responses:
-        "200":
-          description: Describes the types of request supported by each available provider
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties:
-                  type: string
   /healthz:
     get:
       tags:

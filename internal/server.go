@@ -29,7 +29,6 @@ func ConfigureRouter(
 ) *mux.Router {
 	router := mux.NewRouter()
 	router.Use(corsMiddleware)
-	capabilitiesMap := make(map[string][]string)
 	credentialsConfig := config.NewCredentialsConfig()
 	for _, trackInfoHandler := range []handler.TrackInfoHandler{
 		spotify.NewSpotifyHandler(
@@ -51,6 +50,18 @@ func ConfigureRouter(
 			)
 			handlerCapabilities = append(handlerCapabilities, constants.RequestTypeNames[constants.PlaylistRequestType])
 		}
+		if albumHandler, ok := trackInfoHandler.(handler.TrackInfoAlbumHandler); ok {
+			router.HandleFunc(
+				fmt.Sprintf(
+					"/%s/%s/{%s:.+}",
+					trackInfoHandler.Identifier(),
+					constants.RequestTypeNames[constants.AlbumRequestType],
+					constants.AlbumIdentifierParam,
+				),
+				createHandlerFunctionClosure(albumHandler.Album),
+			)
+			handlerCapabilities = append(handlerCapabilities, constants.RequestTypeNames[constants.TrackRequestType])
+		}
 		if trackHandler, ok := trackInfoHandler.(handler.TrackInfoTrackHandler); ok {
 			router.HandleFunc(
 				fmt.Sprintf(
@@ -63,12 +74,7 @@ func ConfigureRouter(
 			)
 			handlerCapabilities = append(handlerCapabilities, constants.RequestTypeNames[constants.TrackRequestType])
 		}
-		capabilitiesMap[trackInfoHandler.Identifier()] = handlerCapabilities
 	}
-	router.HandleFunc("/capabilities", func(writer http.ResponseWriter, request *http.Request) {
-		jsonResponseType(&writer)
-		json.NewEncoder(writer).Encode(capabilitiesMap)
-	})
 	router.PathPrefix("/docs/").Handler(http.FileServer(http.FS(fs.FS(docsDirectory))))
 	router.PathPrefix("/client/dist/").Handler(http.FileServer(http.FS(fs.FS(clientDirectory))))
 	router.PathPrefix("/client/assets/").Handler(http.FileServer(http.FS(fs.FS(assetsDirectory))))
@@ -107,13 +113,13 @@ func createHandlerFunctionClosure[T any](handlerFunction func(*http.Request) (T,
 }
 
 func statusCodeFromError(err error) (int, string) {
-	if _, ok := err.(handler.InvalidPlaylistIdError); ok {
+	if _, ok := err.(handler.InvalidTrackCollectionIdError); ok {
 		return http.StatusBadRequest, err.Error()
 	}
 	if _, ok := err.(handler.HandlerAuthenticationError); ok {
 		return http.StatusUnauthorized, err.Error()
 	}
-	if _, ok := err.(handler.PlaylistNotFoundError); ok {
+	if _, ok := err.(handler.TrackCollectionNotFoundError); ok {
 		return http.StatusNotFound, err.Error()
 	}
 	if _, ok := err.(handler.TrackNotFoundError); ok {
