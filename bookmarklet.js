@@ -1,4 +1,8 @@
 javascript:(function() {
+    if (!window.location.href.match(/^(http(s)?:\/\/(www\.)?smithersradio.com|file:\/\/).*/)) {
+        console.warn("url not supported by CICK Playlister: " + window.location.href);
+        return;
+    }
     function reportLoadError() {
         alert("Error loading CICK Playlister. Please report an issue at https://github.com/captaincoordinates/cick-playlister/issues");
     }
