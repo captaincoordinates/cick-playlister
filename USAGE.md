@@ -20,7 +20,7 @@ Clicking the bookmark will bring up a window with a single text input field. Pas
 The tool will fetch track information and fill the playlist's `ARTIST`, `TITLE`, `ALBUM`, and `NEW` fields.
 
 > [!IMPORTANT]  
-> The tool cannot fill the CAN (Canadian Content) field - this is your responsibility.
+> The tool cannot fill the CAN (Canadian Content) field - this is still your responsibility.
 
 ## Limitations
 
