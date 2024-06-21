@@ -6,11 +6,11 @@ Tool to support data entry on the CICK site's "Create Playlist" page. See [usage
 
 The tool has three components: a server, a client, and a bookmarklet. 
 
-The server component manages communication with streaming service API(s) to retrieve track data for playlists, albums, and tracks. It exposes a number of endpoints that can be viewed with Swagger at [http://localhost:8123/docs/swagger/](http://localhost:8123/docs/swagger/). Credentials are required to interact with stream service API(s) (see below).
+The server component manages communication with streaming service API(s) to retrieve track data for playlists, albums, and tracks. It exposes a number of endpoints that can be viewed with Swagger at [http://localhost:8123/docs/swagger/](http://localhost:8123/docs/swagger/). Credentials are required to interact with streaming service API(s) (see below). The server component is written in Go.
 
-The client component presents a simple modal to the user that accepts URLs for playlists, albums, and tracks. It communicates with the server component to retrieve track data, and fills input fields on the "Create Playlist" page.
+The client component presents a simple modal to the user that accepts URLs for playlists, albums, and tracks. It communicates with the server component to retrieve track data, and fills input fields on the "Create Playlist" page. The client component is written in TypeScript.
 
-The bookmarklet launches the client component. It will only proceed if the current `window.location.href` is either the CICK website or a `file://` path (indicating local development).
+The bookmarklet launches the client component. It will only proceed if the current `window.location.href` is either the CICK website or a `file://` path (indicating local development). The bookmarklet is written in JavaScript.
 
 ## Testing, CI/CD
 
@@ -41,7 +41,7 @@ Output is generated in `./dist/{today's date}` and compiled for Windows to suit 
 scripts/release.sh
 ```
 
-A file called `bookmarklet.js` in `./dist/{today's date}` contains code required for the bookmarklet that triggers the input modal. The `credentials.json` file will also be copied to the output location.
+A file called `bookmarklet.js` in `./dist/{today's date}` contains code required for the bookmarklet that triggers the input modal. The `credentials.json` file will also be copied to the output location so that the release directory contains all necessary files.
 
 ## Development
 
