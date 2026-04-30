@@ -8,6 +8,7 @@ type TrackDisplay =  Omit<TrackInfo, "isSingle">;
 
 class CickPlaylisterClient {
 
+  public readonly anchorTargetElementId: string = "station-playlist-tracks-wrapper";
   public readonly anchorId: string = "cick-playlister-client-anchor";
 
   private readonly urlInputId: string = "cick-playlister-input";
@@ -37,6 +38,9 @@ class CickPlaylisterClient {
       `
     });
     const anchor = this.anchor;
+    if (!anchor) {
+      return;
+    }
     anchor.innerHTML = `
       <div id="cick-playlister-modal">
         <div class="modal-container">
@@ -90,6 +94,9 @@ class CickPlaylisterClient {
 
   public hide(): void {
     const anchor = this.anchor;
+    if (!anchor) {
+      return;
+    }
     anchor.innerHTML = "";
     anchor.style.display = "none";
     window.removeEventListener("keydown", this.boundEscapeKeyHandler);
@@ -178,8 +185,17 @@ class CickPlaylisterClient {
     };
   }
 
-  private get anchor(): HTMLElement {
-    return document.getElementById(this.anchorId)!;
+  private get anchor(): HTMLElement | undefined {
+    const iframes = document.querySelectorAll("iframe.overlay-active");
+    if (iframes.length > 0) {
+      const iframe = iframes[0] as HTMLIFrameElement;
+      if (iframe.contentDocument) {
+        return iframe.contentDocument.getElementById(this.anchorTargetElementId) as HTMLElement;
+      } else if (iframe.contentWindow && iframe.contentWindow.document) {
+        return iframe.contentWindow.document.getElementById(this.anchorTargetElementId) as HTMLElement;
+      }
+    }
+    this.reportError("Unable to find anchor element");
   }
 
   private get urlInput(): HTMLInputElement {
@@ -194,8 +210,12 @@ class CickPlaylisterClient {
     this.reportFeedback(`Processing ${provider}: ${type}...`);
   }
 
-  private reportError(): void {
-    alert("Error in CICK Playlister. Please report an issue at https://github.com/captaincoordinates/cick-playlister/issues");
+  private reportError(callerMessage?: string): void {
+    const messages = [
+      callerMessage || "Error in CICK Playlister.",
+      "Please report an issue at https://github.com/captaincoordinates/cick-playlister/issues"
+    ];
+    alert(messages.join(" "));
   }
 
   private reportFeedback(message: string): void {

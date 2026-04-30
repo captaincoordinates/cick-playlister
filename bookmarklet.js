@@ -25,7 +25,25 @@ javascript:(function() {
         script.onload = function() {
             var anchor = document.createElement("div");
             anchor.id = window.cickPlaylisterClient.anchorId;
-            document.body.appendChild(anchor);
+            var targetElementId = "station-playlist-tracks-wrapper";
+            var targetElement = null;
+            var iframes = document.querySelectorAll("iframe.overlay-active");
+            if (iframes.length > 0) {
+                var iframe = iframes[0];
+                if (iframe.contentDocument) {
+                    targetElement = iframe.contentDocument.getElementById(targetElementId);
+                } else if (iframe.contentWindow && iframe.contentWindow.document) {
+                    targetElement = iframe.contentWindow.document.getElementById(targetElementId);
+                } else {
+                    console.log("no way of accessing iframe content")
+                }
+            }
+            
+            if (targetElement) {
+                targetElement.insertBefore(anchor, targetElement.firstChild);
+            } else {
+                reportLoadError()
+            }
             window.cickPlaylisterClient.show();
         };
         document.body.appendChild(script);
